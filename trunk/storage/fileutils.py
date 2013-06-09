@@ -5,15 +5,19 @@ from re	     import match
 
 import os
 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Class FileError(): Clase para raisear
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 class FileError(Exception):
     def __init__(self, value):
 	self.value = value
     def __str__(self):
 	return repr(self.value)
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Comprueba la existencia de un archivo
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
 def FileExist(path, file):
     if not path.endswith('/'):
 	path = path + '/'
@@ -38,6 +42,13 @@ def SplitExtension(FileName=None):
     return None, None
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# GetPhysicalFileName(): Retorna el nombre real del archivo en el sistema 
+# 
+# Intenta utilizar el nombre pasado por parametro, de no ser posible
+# agrega _VER-[0-9] hasta encontrar un file que si pueda crear
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 def GetPhysicalFileName(Path, FileName):
 
     if FileExist(Path,FileName):
@@ -53,7 +64,10 @@ def GetPhysicalFileName(Path, FileName):
     else:
 	return FileName
 
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# GetUniqueFileID(): Genera un id de file, basado en el nombre del archivo y
+# el timestamp generando un resumen md5
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def GetUniqueFileID(FileName=None):
     
     if FileName is None:
@@ -65,7 +79,9 @@ def GetUniqueFileID(FileName=None):
     hasher.update(timestamp)
     return hasher.hexdigest()
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# StringSizeToBytes(): Convierte un tamanio en bytes
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def StringSizeToBytes(StringSize):
 
     result = match('([0-9]+)(B|K|M|G|T|b|k|g|t)', StringSize)
@@ -86,7 +102,9 @@ def StringSizeToBytes(StringSize):
     else:
         return size * 1024 * 1024 * 1024 * 1024
 
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# CloseFile(): Cierra un archivo
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def CloseFile(ufid):
     try:
 	file = File.objects.get(ufid=ufid)
@@ -94,32 +112,29 @@ def CloseFile(ufid):
 	raise FileError('CloseFile(): File [ufid=%s] not found' % ufid)
 
     if file.status == 'O':
-	#
-	# fisical space agregar
-	#
+	file.vfilesize = 0
+	file.pfilesize = os.stat(file.pfilename).st_size
 	file.status = 'C'
 	file.save()
         return True
     else:
 	return False
 
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# DeleteFile(): Borra un archivo
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def DeleteFile(ufid):
     try:
 	file = File.objects.get(ufid=ufid)
     except:
 	raise FileError('DeleteFile(): Unable to delete File [ufid=%s] not found' % ufid)
 
-    if file.status == 'C':
+    if file.status == 'C' or file.status == 'O' or file.status == 'E':
 	if FileExist(file.service.localpath, file.pfilename):
 	    os.unlink(file.service.localpath + file.pfilename)
-	    return True
-
-    elif file.status == 'O':
 	file.delete()
-	return True
-
-    return False
+    
+    return True
 
 
 def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):
@@ -136,6 +151,7 @@ def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):
 	NewFile = File()
 	NewFile.vfilename 	= FileName
         NewFile.ufid		= GetUniqueFileID(FileName)
+	NewFile.pfilesize	= 0
         NewFile.vfilesize	= vfilespace
 	NewFile.service		= Service
 	NewFile.pfilename	= GetPhysicalFileName(Service.localpath, FileName)

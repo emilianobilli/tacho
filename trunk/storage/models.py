@@ -21,7 +21,6 @@ class Service(models.Model):
 	return self.servicename
 
 
-
 class File(models.Model):
     FILE_STATUS = (
 	('O', 'Open'),

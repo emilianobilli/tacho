@@ -162,3 +162,11 @@ def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):
     else:
 	raise FileError('RegisterFile(): No have left space')
 
+
+def ShareFile(ufid):
+    try:
+	file = File.objects.get(ufid=ufid)
+    except:
+	raise FileError('ShareFile(): Unable to share File [ufid=%s] not found' % ufid)
+
+    return file.service.smbpath + file.pfilename

@@ -48,6 +48,7 @@ class Queue(models.Model):
     QUEUE_STATUS = (
 	( ' ', ' ' ),
 	( ' ', ' ' ),
+	( ' ', ' ' ),
     )
     uri		= models.CharField(max_length=512)
     file	= models.ForeignKey('File', null=True, blank=True)
@@ -55,6 +56,7 @@ class Queue(models.Model):
     service	= models.ForeignKey('Service')
     worker_pid	= models.IntegerField(default=-1)
     status	= models.CharField(max_length=1, choices=QUEUE_STATUS)
+
 
 
 

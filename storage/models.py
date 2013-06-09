@@ -40,7 +40,21 @@ class File(models.Model):
 	return self.pfilename
 
 
-
+class Queue(models.Model):
+    QUEUE_ACTION = (
+	( 'G', 'Get' ),
+	( 'P', 'Put' ),
+    )
+    QUEUE_STATUS = (
+	( ' ', ' ' ),
+	( ' ', ' ' ),
+    )
+    uri		= models.CharField(max_length=512)
+    file	= models.ForeignKey('File', null=True, blank=True)
+    action	= models.CharField(max_length=1, choices=QUEUE_ACTION)
+    service	= models.ForeignKey('Service')
+    worker_pid	= models.IntegerField(default=-1)
+    status	= models.CharField(max_length=1, choices=QUEUE_STATUS)
 
 
 

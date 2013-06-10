@@ -25,7 +25,7 @@ import logging
 from lib.daemon import Daemon
 
 
-def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G")
+def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G"):
 
     if ServiceName is not None:
 	try:
@@ -53,14 +53,36 @@ def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G")
 
 
 
-def Public_CloseFile(ufid=None)
+def Public_CloseFile(ufid=None):
+    try:
+	result = CloseFile(ufid)
+	return dict([('result', result),
+		     ('error', '')])
+    except StorageError as e:
+	return dict([('result', False),
+		     ('error', e.value)])
 
 
-def Public_DeleteFile(ufid=None)
+def Public_DeleteFile(ufid=None):
+    try:
+	result = DeleteFile(ufid)
+	return dict([('result', result),
+		     ('error', '')])
+    except StorageError as e:
+	return dict([('result', False),
+		     ('error', e.value)])
 
 
-def Public_ShareFile(ufid=None)
-
+def Public_ShareFile(ufid=None):
+    try:
+	result = ShareFile(ufid)
+	return dict([('result', True),
+		     ('uncpath', result),
+		     ('error', '')])
+    except StorageError as e:
+	return dict([('result', False),
+		     ('uncpath', ''),
+		     ('error', e.value)])
 
 
 
@@ -73,9 +95,9 @@ def Main():
     server = SimpleXMLRPCServer((settings.STGDAEMON_HOST, int(settings.STGDAEMON_PORT)), allow_none=True)
     server.register_introspection_functions()
     server.register_function(Public_RegisterFile, 'RegisterFile')
-    server.register_function(Public_CloseFile,    'CloseFile')
-    server.register_function(Public_DeleteFile,   'DeleteFile')
-    server.register_function(Public_ShareFile,    'ShareFile')
+    server.register_function(Public_CloseFile,    'CloseFile'   )
+    server.register_function(Public_DeleteFile,   'DeleteFile'  )
+    server.register_function(Public_ShareFile,    'ShareFile'   )
 
     server.serve_forever()
 

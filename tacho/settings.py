@@ -7,8 +7,10 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
-
-STGDAEMON_LOG = '/opt/tacho/app/tacho/logs/stgdaemon.log'
+STGDAEMON_PID  = '/opt/tacho/app/tacho/pid/stgdaemon.pid'
+STGDAEMON_LOG  = '/opt/tacho/app/tacho/logs/stgdaemon.log'
+STGDAEMON_HOST = '0.0.0.0'
+STGDAEMON_PORT = '3000'
 
 
 MANAGERS = ADMINS

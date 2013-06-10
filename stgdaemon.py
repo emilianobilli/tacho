@@ -21,10 +21,41 @@ from storage.storageutils import DeleteFile
 from storage.storageutils import CloseFile
 from storage.storageutils import RegisterFile
 from storage.storageutils import StorageError
+from storage.storageutils import TakeOwnership
 
 import logging
 import sys
 from lib.daemon import Daemon
+
+
+def Public_TakeOwnership(ServiceName=None,FileNAme=None):
+    if ServiceName is not None:
+	try:
+	    Svc = Service.objects.get(servicename=ServiceName)
+	    if Svc.status == 'D':
+		return dict([('result', False),
+			    ('ufid', ''),
+			    ('error', 'Public_TakeOwnership(): Service [%s] is Disabled' % ServiceName)])
+	except:
+	    return dict([('result', False),
+			 ('ufid', ''),
+			 ('error', 'Public_TakeOwnership(): Unable to find service [%s]' % ServiceName)])
+
+	try:
+	    file = TakeOwnership(Svc,FileName)
+	    return dict([('result', True),
+			 ('ufid', file.ufid),
+			 ('error', '')])
+
+	except StorageError as e:
+	    return dict([('result', False),
+			 ('ufid', ''),
+		         ('error', e.value)])
+
+    else:
+	return dict([('result', False),
+		     ('ufid', ''),
+		     ('error', 'Public_TakeOwnership(): ServiceName can not be None')]
 
 
 def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G"):
@@ -102,11 +133,11 @@ def Main():
 
     server = SimpleXMLRPCServer((settings.STGDAEMON_HOST, int(settings.STGDAEMON_PORT)), allow_none=True)
     server.register_introspection_functions()
-    server.register_function(Public_RegisterFile, 'RegisterFile')
-    server.register_function(Public_CloseFile,    'CloseFile'   )
-    server.register_function(Public_DeleteFile,   'DeleteFile'  )
-    server.register_function(Public_ShareFile,    'ShareFile'   )
-
+    server.register_function(Public_RegisterFile,  'RegisterFile' )
+    server.register_function(Public_CloseFile,     'CloseFile'    )
+    server.register_function(Public_DeleteFile,    'DeleteFile'   )
+    server.register_function(Public_ShareFile,     'ShareFile'    )
+    server.register_function(Public_TakeOwnership, 'TakeOwnership')
     server.serve_forever()
 
 

@@ -20,8 +20,10 @@ from storage.models import File
 from storage.storageutils import DeleteFile
 from storage.storageutils import CloseFile
 from storage.storageutils import RegisterFile
+from storage.storageutils import StorageError
 
 import logging
+import sys
 from lib.daemon import Daemon
 
 
@@ -30,10 +32,14 @@ def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G"):
     if ServiceName is not None:
 	try:
 	    Svc = Service.objects.get(servicename=ServiceName)
+	    if Svc.status == 'D':
+		return dict([('result', False),
+			    ('ufid', ''),
+			    ('error', 'Public_RegisterFile(): Service [%s] is Disabled' % ServiceName)])
 	except:
 	    return dict([('result', False),
 			 ('ufid', ''),
-			 ('error', 'Unable to find service [%s]' % ServiceName)])
+			 ('error', 'Public_RegisterFile(): Unable to find service [%s]' % ServiceName)])
 
 	try:
 	    file = RegisterFile(Svc,FileName,ProvisionedSpace)
@@ -49,7 +55,7 @@ def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G"):
     else:
 	return dict([('result', False),
 		     ('ufid', ''),
-		     ('error', 'ServiceName can not be None')])
+		     ('error', 'Public_RegisterFile(): ServiceName can not be None')])
 
 
 
@@ -92,6 +98,8 @@ def Main():
 			filename=settings.STGDAEMON_LOG,
 			level=logging.INFO)
 
+
+
     server = SimpleXMLRPCServer((settings.STGDAEMON_HOST, int(settings.STGDAEMON_PORT)), allow_none=True)
     server.register_introspection_functions()
     server.register_function(Public_RegisterFile, 'RegisterFile')
@@ -101,5 +109,31 @@ def Main():
 
     server.serve_forever()
 
-Main()
 
+class main_daemon(Daemon):
+    def run(self):
+        try:
+            Main()
+        except KeyboardInterrupt:
+            sys.exit()      
+
+if __name__ == "__main__":
+        daemon = main_daemon(settings.STGDAEMON_PID, stdout=settings.STGDAEMON_LOG, stderr=settings.STGDAEMON_LOG)
+        if len(sys.argv) == 2:
+                if 'start'     == sys.argv[1]:
+                        daemon.start()
+                elif 'stop'    == sys.argv[1]:
+                        daemon.stop()
+                elif 'restart' == sys.argv[1]:
+                        daemon.restart()
+                elif 'run'     == sys.argv[1]:
+                        daemon.run()
+                elif 'status'  == sys.argv[1]:
+                        daemon.status()
+                else:
+                        print "Unknown command"
+                        sys.exit(2)
+                sys.exit(0)
+        else:
+                print "usage: %s start|stop|restart|run" % sys.argv[0]
+                sys.exit(2)

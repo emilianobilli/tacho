@@ -122,7 +122,11 @@ def CloseFile(ufid):
 
     if file.status == 'O':
 	file.vfilesize = 0
-	file.pfilesize = os.stat(file.pfilename).st_size
+	try:
+	    file.pfilesize = os.stat(file.service.localpath + file.pfilename).st_size
+	except OSError as e:
+	    raise StorageError(e.strerror + ' [ ' + e.filename + ' ]')
+
 	file.status = 'C'
 	file.save()
 
@@ -183,7 +187,7 @@ def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):
 	NewFile.save()
 	
 	SFreeSpace = CalculateFreeSpace(Service)
-	Service.freespace = SFReeSpace
+	Service.freespace = SFreeSpace
 	Service.save()
 
 	return NewFile

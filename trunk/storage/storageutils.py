@@ -125,7 +125,11 @@ def CloseFile(ufid):
 	try:
 	    file.pfilesize = os.stat(file.service.localpath + file.pfilename).st_size
 	except OSError as e:
-	    raise StorageError(e.strerror + ' [ ' + e.filename + ' ]')
+	    #
+	    # Nunca en esta instancia DeleteFile tira una excepcion
+	    #
+	    DeleteFile(ufid)
+	    raise StorageError(e.strerror + ' [ ' + e.filename + ' ] ->[File:%s Eliminated]' % ufid )
 
 	file.status = 'C'
 	file.save()

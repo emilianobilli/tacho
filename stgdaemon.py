@@ -55,7 +55,7 @@ def Public_TakeOwnership(ServiceName=None,FileNAme=None):
     else:
 	return dict([('result', False),
 		     ('ufid', ''),
-		     ('error', 'Public_TakeOwnership(): ServiceName can not be None')]
+		     ('error', 'Public_TakeOwnership(): ServiceName can not be None')])
 
 
 def Public_RegisterFile(ServiceName=None,FileName=None, ProvisionedSpace="1G"):

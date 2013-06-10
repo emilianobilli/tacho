@@ -43,9 +43,3 @@ def Storage_CloseFile(StorageHost, ufid, Port=3000):
     except socket.error as e:
 	raise StorageClientError('Catch socket.error: ' + str(e),True)
 
-
-try:
-    print Storage_RegisterFile('localhost', 'Jose', 'Pirulo', '10b')
-except StorageClientError as e:
-    print e.value
-    print "Critical: " + str(e.critical)

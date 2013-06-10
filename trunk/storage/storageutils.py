@@ -17,13 +17,14 @@ class StorageError(Exception):
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Comprueba la existencia de un archivo
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-def FileExist(path, file):
+def FileExist(path, file,only_physical=False):
 
     pfile = None
-    try:
-	pfile = File.objects.get(pfilename=file)
-    except:
-	pass
+    if only_physical == False:
+	try:
+	    pfile = File.objects.get(pfilename=file)
+	except:
+	    pass
 
     if not path.endswith('/'):
 	path = path + '/'
@@ -167,6 +168,29 @@ def DeleteFile(ufid):
 	service.save()
     
     return True
+
+
+def TakeOwnership(Service=None, FileName=None):
+    if Service is None:
+	raise StorageError('TakeOwnership(): Service can not be None')
+
+    if FileName is None:
+	raise StorageError('TakeOwnership(): FileName can not be None')
+
+    if FileExist(Service.localpath,FileName,True):
+	NewFile = File()
+	NewFile.vfilename	= FileName
+	NewFile.pfilename	= FileName
+	NewFile.ufid		= GetUniqueFileID(FileName)
+	NewFile.service		= Service
+	NewFile.status		= 'O'
+	NewFile.vfilesize	= 0
+	NewFile.pfilesize	= 0
+	NewFile.save()
+	CloseFile(NewFile.ufid)
+	return NewFile
+    else:
+	raise StorageError('TakeOwnership(): File not exit [%s%s]' % (Service.localpath+FileName))
 
 
 def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):

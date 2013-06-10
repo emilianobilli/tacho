@@ -7,6 +7,10 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
+
+STGDAEMON_LOG = '/opt/tacho/app/tacho/logs/stgdaemon.log'
+
+
 MANAGERS = ADMINS
 
 DATABASES = {

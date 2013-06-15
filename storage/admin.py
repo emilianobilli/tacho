@@ -8,9 +8,8 @@ class FileAdmin(admin.ModelAdmin):
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ( 'servicename', 'servicesize', 'freespace', 'status' )
 
-
 class QueueAdmin(admin.ModelAdmin):
-    list_displat = ( 'id', 'action', 'uri', 'status' )
+    list_display = ( 'id', 'action', 'uri', 'status', 'progress', 'speed_mbps' )
 
 admin.site.register(Queue,QueueAdmin)
 admin.site.register(Service,ServiceAdmin)

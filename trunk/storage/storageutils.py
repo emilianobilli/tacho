@@ -2,7 +2,7 @@ from models  import File, Service
 from time    import time
 from hashlib import md5
 from re	     import match
-
+from ftplib  import FTP, error_perm
 import os
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -169,7 +169,10 @@ def DeleteFile(ufid):
     
     return True
 
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# TakeOwnership(): Toma posesion de un archivo que se encuentra en el 
+#		   servicio
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def TakeOwnership(Service=None, FileName=None):
     if Service is None:
 	raise StorageError('TakeOwnership(): Service can not be None')
@@ -193,6 +196,9 @@ def TakeOwnership(Service=None, FileName=None):
 	raise StorageError('TakeOwnership(): File not exit [%s%s]' % (Service.localpath+FileName))
 
 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# RegisterFile(): Crea un archivo en el Servicio
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):
 
     if Service  is None:
@@ -222,7 +228,9 @@ def RegisterFile(Service=None, FileName=None, ProvisionedSpace="10G"):
     else:
 	raise StorageError('RegisterFile(): No have left space')
 
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ShareFile(): Da la ruta de acceso a un archivo
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def ShareFile(ufid):
     try:
 	file = File.objects.get(ufid=ufid)
@@ -231,8 +239,9 @@ def ShareFile(ufid):
 
     return file.service.smbpath + file.pfilename
 
-
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# CalculateFreeSpace(): Calcula el espacio libre en un servicio
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def CalculateFreeSpace(service = None):
 
     if service is None:
@@ -248,6 +257,131 @@ def CalculateFreeSpace(service = None):
 	    UsedSpace = UsedSpace + file.pfilesize
 
     return service.servicesize - UsedSpace
+
+
+class CallBack(object):
+    def __init__(self):
+	self.totaldatasize = 0
+	self.localfile     = None
+	self.queue         = None
+	self.starttime     = time()
+    
+    def Write(self, data):
+
+	self.localfile.write(data)
+	self.totaldatasize = self.totaldatasize + len(data)
+        
+	progress = int((self.totaldatasize * 100) / self.queue.file.vfilesize)
+	if progress > self.queue.progress:
+	    now = time()
+	    self.queue.speed_mbps	=  (self.totaldatasize / (now - self.starttime)) / ( 1024 * 1024 ) 
+	    self.queue.progress = progress
+	    self.queue.save()
+
+    def Update(self, data):
+	self.totaldatasize = self.totaldatasize + len(data)
+
+
+	progress = int((self.totaldatasize * 100) / self.queue.file.pfilesize)
+	if progress > self.queue.progress:
+	    now = time()
+	    self.queue.speed_mbps	=  (self.totaldatasize / (now - self.starttime)) / ( 1024 * 1024 ) 
+	    self.queue.progress = progress
+	    self.queue.save()
+
+
+def PutFile(Queue=None):
+    if Queue is None:
+	raise StorageError('PutFile(): Queue can not be None')
+
+    if Queue.file is None:
+	raise StorageError('PutFile(): File in Queue can not be None')
+
+    FtpData = SplitUriSchema(Queue.uri)
+
+    try:
+	FtpHandler = FTP()
+	FtpHandler.connect(FtpData['hostname'], FtpData['port'])
+	FtpHandler.login(FtpData['username'], FtpData['password'])
+
+	#
+	# Aca deberia estar el algoritmo para cambiar path
+	#
+
+	FtpHandler.cwd(FtpData['path'])
+    except error_perm, e:
+	raise StorageError('PutFile(): %s' % str(e))
+
+    try:
+	LocalFile = open(Queue.service.localpath + Queue.file.pfilename,'rb')
+    except IOError as e:
+	raise StorageError('PutFile(): %s [%s]' % (e.strerror, Queue.service.localpath + Queue.file.pfilename))
+
+    CBack = CallBack()
+    CBack.queue	    = Queue
+
+    try:
+	FtpHandler.storbinary('STOR %s' % FtpData['filename'], LocalFile,8192,CBack.Update)
+    except error_perm, e:
+	raise StorageError('PutFile(): %s' % e.strerror)
+
+    LocalFile.close()
+    FtpHandler.close()
+
+    return True
+
+
+
+def GetFile(Queue=None):
+
+
+    if Queue is None:
+	raise StorageError('GetFile(): Queue can not be None')
+
+    FtpData = SplitUriSchema(Queue.uri)
+
+    try:
+	FtpHandler = FTP()
+	FtpHandler.connect(FtpData['hostname'], FtpData['port'])
+	FtpHandler.login(FtpData['username'], FtpData['password'])
+	FtpHandler.cwd(FtpData['path'])
+    except error_perm, e:
+	raise StorageError('GetFile(): %s' % str(e))
+
+
+    try:
+	FileSize = FtpHandler.size(FtpData['filename'])
+    except error_perm, e:
+	raise StorageError('GetFile(): Getting filesize: %s' % str(e))
+
+    File = RegisterFile(Queue.service, FtpData['filename'], str(FileSize) + 'b')
+    Queue.file = File
+    Queue.save()
+
+    try:
+	LocalFile = open(Queue.service.localpath + Queue.file.pfilename,'wb')
+    except IOError as e:
+	DeleteFile(File.ufid)
+	raise StorageError('GetFile(): %s [%s]' % (e.strerror, Queue.service.localpath + Queue.file.pfilename))
+
+
+    CBack = CallBack()
+    CBack.localfile = LocalFile
+    CBack.queue	    = Queue
+    
+    
+
+    try:
+	FtpHandler.retrbinary('RETR %s' % FtpData['filename'],CBack.Write)
+    except error_perm, e:
+	DeleteFile(File.ufid)
+	raise StorageError('GetFile(): %s' % e.strerror)
+
+    LocalFile.close()
+    FtpHandler.close()
+    CloseFile(File.ufid)
+
+    return True
 
 
 def SplitUriSchema(Uri=None):

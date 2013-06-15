@@ -56,6 +56,12 @@ class Queue(models.Model):
     service	= models.ForeignKey('Service')
     worker_pid	= models.IntegerField(default=-1)
     status	= models.CharField(max_length=1, choices=QUEUE_STATUS)
+    progress	= models.IntegerField(default=0)
+    error	= models.CharField(max_length=512)
+    speed_mbps	= models.DecimalField(blank=True,null=True, max_digits=5, decimal_places=3)
+
+    def __unicode__(self):
+	return self.action + ': -> ' + self.uri
 
 
 

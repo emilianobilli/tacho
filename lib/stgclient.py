@@ -43,3 +43,12 @@ def Storage_CloseFile(StorageHost, ufid, Port=3000):
     except socket.error as e:
 	raise StorageClientError('Catch socket.error: ' + str(e),True)
 
+
+def Storage_EnqueueGetFile(StorageHost, ServiceName, Uri, ufid):
+
+def Storage_EnqueuePutFile(StorageHost, Uri, ufid):
+
+def Storage_QueueStatus(StorageHost, uqid):
+
+
+

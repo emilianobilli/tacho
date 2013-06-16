@@ -295,13 +295,19 @@ class CallBack(object):
 
 
 def DequeueBestCandidate_Get(Service):
-    return Queue.objects.filter(service=Service, action='G', status='Q').order_by('-priority')[0]
+    try:
+	return Queue.objects.filter(service=Service, action='G', status='Q').order_by('-priority')[0]
+    except:
+	return None
 
 def DequeueBestCandidate_Put(Service):
-    return Queue.objects.filter(service=Service, action='P', status='Q').order_by('-priority')[0]
+    try:
+	return Queue.objects.filter(service=Service, action='P', status='Q').order_by('-priority')[0]
+    except:
+	return None
 
 def TotalActiveQueue_Get(Service):
-    return len(Queue.obejcts.filter(service=Service, action='G', status='A'))
+    return len(Queue.objects.filter(service=Service, action='G', status='A'))
 
 def TotalActiveQueue_Put(Service):
     return len(Queue.objects.filter(service=Service, action='P', status='A'))
@@ -311,27 +317,6 @@ def TotalSchedulableQueue_Get(Service):
 
 def TotalSchedulableQueue_Put(Service):
     return Service.maxput - TotalActiveQueue_Put(Service)
-
-
-
-def WorkerEnd(signum, frame):
-    #
-    # Captura su estado de salida
-    #
-    pid, status = os.wait()
-
-    
-
-
-def DispachQueue_Get(Service = None):
-
-    
-
-
-def DispachQueue_Put(Service = None):
-
-
-def 
 
 
 def PutFile(Queue=None):
@@ -371,9 +356,6 @@ def PutFile(Queue=None):
 
     LocalFile.close()
     FtpHandler.close()
-
-    return True
-
 
 
 def GetFile(Queue=None):
@@ -422,8 +404,6 @@ def GetFile(Queue=None):
     LocalFile.close()
     FtpHandler.close()
     CloseFile(File.ufid)
-
-    return True
 
 
 def SplitUriSchema(Uri=None):

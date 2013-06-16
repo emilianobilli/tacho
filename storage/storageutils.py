@@ -1,4 +1,4 @@
-from models  import File, Service
+from models  import File, Service, Queue
 from time    import time
 from hashlib import md5
 from re	     import match
@@ -33,7 +33,6 @@ def FileExist(path, file,only_physical=False):
 
     return False
 
-
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Elimina las extensiones (Considera que puede haber puntos en el medio del archivo)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -48,7 +47,6 @@ def SplitExtension(FileName=None):
             i = i + 1
         return basename, basename_tmp_list[len(basename_tmp_list)-1]
     return None, None
-
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # GetPhysicalFileName(): Retorna el nombre real del archivo en el sistema 
@@ -71,7 +69,6 @@ def GetPhysicalFileName(Path, FileName):
     else:
 	return FileName
 
-
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # GetUniqueFileID(): Genera un id de file, basado en el nombre del archivo y
 # el timestamp generando un resumen md5
@@ -85,8 +82,18 @@ def GetUniqueFileID(FileName=None):
     hasher = md5()    
     hasher.update(FileName)
     hasher.update(timestamp)
-    return hasher.hexdigest()
+    return 'UFID' + hasher.hexdigest()
 
+def GetUniqueQueueID(Uri=None):
+    
+    if Uri is None:
+	raise StorageError('GetUniqueQueueID(): Uri can not be None')
+
+    timestamp = str(time())
+    hasher = md5()    
+    hasher.update(Uri)
+    hasher.update(timestamp)
+    return 'UQID' + hasher.hexdigest()
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # StringSizeToBytes(): Convierte un tamanio en bytes
@@ -110,7 +117,6 @@ def StringSizeToBytes(StringSize):
         return size * 1024 * 1024 * 1024
     else:
         return size * 1024 * 1024 * 1024 * 1024
-
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # CloseFile(): Cierra un archivo
@@ -142,7 +148,6 @@ def CloseFile(ufid):
         return True
     else:
 	return False
-
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # DeleteFile(): Borra un archivo
@@ -194,7 +199,6 @@ def TakeOwnership(Service=None, FileName=None):
 	return NewFile
     else:
 	raise StorageError('TakeOwnership(): File not exit [%s%s]' % (Service.localpath+FileName))
-
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # RegisterFile(): Crea un archivo en el Servicio
@@ -290,6 +294,46 @@ class CallBack(object):
 	    self.queue.save()
 
 
+def DequeueBestCandidate_Get(Service):
+    return Queue.objects.filter(service=Service, action='G', status='Q').order_by('-priority')[0]
+
+def DequeueBestCandidate_Put(Service):
+    return Queue.objects.filter(service=Service, action='P', status='Q').order_by('-priority')[0]
+
+def TotalActiveQueue_Get(Service):
+    return len(Queue.obejcts.filter(service=Service, action='G', status='A'))
+
+def TotalActiveQueue_Put(Service):
+    return len(Queue.objects.filter(service=Service, action='P', status='A'))
+
+def TotalSchedulableQueue_Get(Service):
+    return Service.maxget - TotalActiveQueue_Get(Service)
+
+def TotalSchedulableQueue_Put(Service):
+    return Service.maxput - TotalActiveQueue_Put(Service)
+
+
+
+def WorkerEnd(signum, frame):
+    #
+    # Captura su estado de salida
+    #
+    pid, status = os.wait()
+
+    
+
+
+def DispachQueue_Get(Service = None):
+
+    
+
+
+def DispachQueue_Put(Service = None):
+
+
+def 
+
+
 def PutFile(Queue=None):
     if Queue is None:
 	raise StorageError('PutFile(): Queue can not be None')
@@ -317,8 +361,8 @@ def PutFile(Queue=None):
     except IOError as e:
 	raise StorageError('PutFile(): %s [%s]' % (e.strerror, Queue.service.localpath + Queue.file.pfilename))
 
-    CBack = CallBack()
-    CBack.queue	    = Queue
+    CBack 	= CallBack()
+    CBack.queue	= Queue
 
     try:
 	FtpHandler.storbinary('STOR %s' % FtpData['filename'], LocalFile,8192,CBack.Update)
@@ -333,7 +377,6 @@ def PutFile(Queue=None):
 
 
 def GetFile(Queue=None):
-
 
     if Queue is None:
 	raise StorageError('GetFile(): Queue can not be None')
@@ -354,9 +397,10 @@ def GetFile(Queue=None):
     except error_perm, e:
 	raise StorageError('GetFile(): Getting filesize: %s' % str(e))
 
-    File = RegisterFile(Queue.service, FtpData['filename'], str(FileSize) + 'b')
-    Queue.file = File
-    Queue.save()
+    if Queue.file is None:
+	File = RegisterFile(Queue.service, FtpData['filename'], str(FileSize) + 'b')
+        Queue.file = File
+        Queue.save()
 
     try:
 	LocalFile = open(Queue.service.localpath + Queue.file.pfilename,'wb')
@@ -368,8 +412,6 @@ def GetFile(Queue=None):
     CBack = CallBack()
     CBack.localfile = LocalFile
     CBack.queue	    = Queue
-    
-    
 
     try:
 	FtpHandler.retrbinary('RETR %s' % FtpData['filename'],CBack.Write)

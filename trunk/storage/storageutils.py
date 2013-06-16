@@ -14,6 +14,51 @@ class StorageError(Exception):
     def __str__(self):
 	return repr(self.value)
 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Enqueue_Get(): Encola para traer un file
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+def Enqueue_Get(Service=None, Uri=None, File=None):
+    if Service is None:
+	raise StorageError('Enqueue_Get(): Service can not be None')
+
+    if Uri is None:
+	raise StorageError('Enqueue_Get(): Uri can not be None')
+
+    Q = Queue()
+    Q.status  = 'Q'
+    Q.action  = 'G'
+    Q.uri     = Uri
+    if File is not None:
+	Q.file = File
+    Q.service = Service
+    Q.uqid    = GetUniqueQueueID(Uri)
+    Q.save()
+    return Q
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Enqueue_Put(): Encola para dejar un file
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+def Enqueue_Put(Uri=None, File=None)
+    if File is None:
+	raise StorageError('Enqueue_Get(): File can not be None')
+
+    if Uri is None:
+	raise StorageError('Enqueue_Get(): Uri can not be None')
+
+    Q = Queue()
+    Q.status  = 'Q'
+    Q.action  = 'P'
+    Q.uri     = Uri
+    Q.file = File
+    Q.service = Service
+    Q.uqid    = GetUniqueQueueID(Uri)
+    Q.save()
+    return Q
+
+
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Comprueba la existencia de un archivo
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 

@@ -16,19 +16,96 @@ setup_environ(settings)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 from storage.models import Service
 from storage.models import File
+from storage.mdoels import Queue
 
 from storage.storageutils import DeleteFile
 from storage.storageutils import CloseFile
 from storage.storageutils import RegisterFile
 from storage.storageutils import StorageError
 from storage.storageutils import TakeOwnership
+from storage.storageutils import Enqueue_Get
+from storage.storageutils import Enqueue_Put
 
 import logging
 import sys
 from lib.daemon import Daemon
 
 
-def Public_TakeOwnership(ServiceName=None,FileNAme=None):
+def Public_Enqueue_Get(ServiceName=None, Uri=None, UFID=None):
+    if Service is None:
+	return dict([('result', False),
+		     ('uqid', ''),
+		     ('error', 'Public_Enqueue_Get(): ServiceName can not be None')])
+
+    if Uri is None:
+	return dict([('result', False),
+		     ('uqid', ''),
+		     ('error', 'Public_Enquene_Get(): Uri can not be None')])
+
+    if UFID is not None:
+	file = None
+	try:
+	    file = File.objects.get(ufid=UFID)
+	except:
+	    return dict([('result', False),
+		         ('uqid', ''),
+		         ('error', 'Public_Enqueue_Get(): Uri can not be None')])
+
+    try:
+        Svc = Service.objects.get(servicename=ServiceName)
+    	    if Svc.status == 'D':
+		return dict([('result', False),
+			    ('uqid', ''),
+			    ('error', 'Public_TakeOwnership(): Service [%s] is Disabled' % ServiceName)])
+    except:
+        return dict([('result', False),
+    		     ('uqid', ''),
+		     ('error', 'Public_TakeOwnership(): Unable to find service [%s]' % ServiceName)])
+
+    try:
+	Q = Enqueue_Get(Svc, Uri, file)
+	return dict([('result', True),
+		     ('uqid', Q.uqid),
+		     ('error', e.value)])
+
+    except StorageError as e:
+	return dict([('result', False),
+	    	     ('ufid', ''),
+		     ('error', e.value)])	
+
+
+def Public_Enqueue_Put(Uri=None, UFID=None):
+    if Uri is None:
+	return dict([('result', False),
+		     ('uqid', ''),
+		     ('error', 'Public_Enquene_Put(): Uri can not be None')])
+
+    if UFID is None:
+	return dict([('result', False),
+		     ('uqid', ''),
+		     ('error', 'Public_Enquene_Put(): Uri can not be None')])
+
+    try:
+        file = File.objects.get(ufid=UFID)
+    except:
+        return dict([('result', False),
+		     ('uqid', ''),
+		     ('error', 'Public_Enqueue_Put(): Uri can not be None')])
+
+    try:
+	Q = Enqueue_Put(Uri, file)
+	return dict([('result', True),
+		     ('uqid', Q.uqid),
+		     ('error', e.value)])
+
+    except StorageError as e:
+	return dict([('result', False),
+	    	     ('ufid', ''),
+		     ('error', e.value)])	
+
+
+
+def Public_TakeOwnership(ServiceName=None,FileName=None):
     if ServiceName is not None:
 	try:
 	    Svc = Service.objects.get(servicename=ServiceName)
@@ -130,7 +207,6 @@ def Main():
 			level=logging.INFO)
 
 
-
     server = SimpleXMLRPCServer((settings.STGDAEMON_HOST, int(settings.STGDAEMON_PORT)), allow_none=True)
     server.register_introspection_functions()
     server.register_function(Public_RegisterFile,  'RegisterFile' )
@@ -138,6 +214,8 @@ def Main():
     server.register_function(Public_DeleteFile,    'DeleteFile'   )
     server.register_function(Public_ShareFile,     'ShareFile'    )
     server.register_function(Public_TakeOwnership, 'TakeOwnership')
+    server.register_function(Public_Enqueue_Get,   'Enqueue_Get')
+    server.register_function(Public_Enqueue_Put,   'Enqueue_Put')
     server.serve_forever()
 
 

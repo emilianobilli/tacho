@@ -41,7 +41,7 @@ def Enqueue_Get(Service=None, Uri=None, File=None):
 # Enqueue_Put(): Encola para dejar un file
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def Enqueue_Put(Uri=None, File=None)
+def Enqueue_Put(Uri=None, File=None):
     if File is None:
 	raise StorageError('Enqueue_Get(): File can not be None')
 
@@ -445,6 +445,8 @@ def GetFile(Queue=None):
     except error_perm, e:
 	DeleteFile(File.ufid)
 	raise StorageError('GetFile(): %s' % e.strerror)
+    except IOError as e:
+	raise StorageError('CallBack(): on Write [%s] %s' % (Queue.service.localpath + Queue.file.pfilename, e.strerror))
 
     LocalFile.close()
     FtpHandler.close()

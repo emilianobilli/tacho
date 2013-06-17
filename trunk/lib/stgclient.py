@@ -22,7 +22,7 @@ def Storage_RegisterFile(StorageHost, ServiceName, FileName, ProvisionedSpace, P
     except xmlrpclib.ProtocolError as err:
 	raise StorageClientError(err.errmsg, True)
     except xmlrpclib.Fault as err:
-	raise StorageClientError(err.FaultString)
+	raise StorageClientError(err.faultString)
     except socket.error as e:
 	raise StorageClientError('Catch socket.error: ' + str(e),True)
 
@@ -39,16 +39,47 @@ def Storage_CloseFile(StorageHost, ufid, Port=3000):
     except xmlrpclib.ProtocolError as err:
 	raise StorageClientError(err.errmsg, True)
     except xmlrpclib.Fault as err:
-	raise StorageClientError(err.FaultString)
+	raise StorageClientError(err.faultString)
     except socket.error as e:
 	raise StorageClientError('Catch socket.error: ' + str(e),True)
 
 
-def Storage_EnqueueGetFile(StorageHost, ServiceName, Uri, ufid):
+def Storage_EnqueueGetFile(StorageHost, ServiceName, Uri, ufid=None, Port=3000):
+    try:
+	Storage = xmlrpclib.ServerProxy('http://'+ StorageHost + ':' + str(Port), allow_none=True)
+	Reply = Storage.Enqueue_Get(ServiceName,Uri,ufid)
+	if Reply['result']:
+	    return Reply['uqid']
+	else:
+	    raise StorageClientError(Reply['error'])
 
-def Storage_EnqueuePutFile(StorageHost, Uri, ufid):
+    except xmlrpclib.ProtocolError as err:
+	raise StorageClientError(err.errmsg, True)
+    except xmlrpclib.Fault as err:
+	raise StorageClientError(err.faultString)
+    except socket.error as e:
+	raise StorageClientError('Catch socket.error: ' + str(e),True)
 
-def Storage_QueueStatus(StorageHost, uqid):
 
 
+def Storage_EnqueuePutFile(StorageHost, Uri, ufid, Port=3000):
+    try:
+	Storage = xmlrpclib.ServerProxy('http://'+ StorageHost + ':' + str(Port), allow_none=True)
+	Reply = Storage.Enqueue_Put(ServiceName,Uri,ufid)
+	if Reply['result']:
+	    return Reply['uqid']
+	else:
+	    raise StorageClientError(Reply['error'])
 
+    except xmlrpclib.ProtocolError as err:
+	raise StorageClientError(err.errmsg, True)
+    except xmlrpclib.Fault as err:
+	raise StorageClientError(err.faultString)
+    except socket.error as e:
+	raise StorageClientError('Catch socket.error: ' + str(e),True)
+
+
+#def Storage_QueueStatus(StorageHost, uqid, Port=3000):
+
+
+print Storage_EnqueueGetFile('localhost', 'svc-0', 'ftp://emilianob:ard010fx@200.43.15.229:21/cccfb34d-JurassicPorn-Apple ProRes422.mov')

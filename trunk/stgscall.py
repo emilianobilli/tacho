@@ -16,7 +16,7 @@ setup_environ(settings)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 from storage.models import Service
 from storage.models import File
-from storage.mdoels import Queue
+from storage.models import Queue
 
 from storage.storageutils import DeleteFile
 from storage.storageutils import CloseFile
@@ -42,8 +42,9 @@ def Public_Enqueue_Get(ServiceName=None, Uri=None, UFID=None):
 		     ('uqid', ''),
 		     ('error', 'Public_Enquene_Get(): Uri can not be None')])
 
+    file = None
     if UFID is not None:
-	file = None
+	
 	try:
 	    file = File.objects.get(ufid=UFID)
 	except:
@@ -53,10 +54,10 @@ def Public_Enqueue_Get(ServiceName=None, Uri=None, UFID=None):
 
     try:
         Svc = Service.objects.get(servicename=ServiceName)
-    	    if Svc.status == 'D':
-		return dict([('result', False),
-			    ('uqid', ''),
-			    ('error', 'Public_TakeOwnership(): Service [%s] is Disabled' % ServiceName)])
+    	if Svc.status == 'D':
+	    return dict([('result', False),
+	    		 ('uqid', ''),
+			 ('error', 'Public_TakeOwnership(): Service [%s] is Disabled' % ServiceName)])
     except:
         return dict([('result', False),
     		     ('uqid', ''),
@@ -66,7 +67,7 @@ def Public_Enqueue_Get(ServiceName=None, Uri=None, UFID=None):
 	Q = Enqueue_Get(Svc, Uri, file)
 	return dict([('result', True),
 		     ('uqid', Q.uqid),
-		     ('error', e.value)])
+		     ('error', '')])
 
     except StorageError as e:
 	return dict([('result', False),
@@ -203,11 +204,11 @@ def Public_ShareFile(ufid=None):
 def Main():
     
     logging.basicConfig(format  ='%(asctime)s - stgdaemon.py -[%(levelname)s]: %(message)s', 
-			filename=settings.STGDAEMON_LOG,
+			filename=settings.STGSCALL_LOG,
 			level=logging.INFO)
 
 
-    server = SimpleXMLRPCServer((settings.STGDAEMON_HOST, int(settings.STGDAEMON_PORT)), allow_none=True)
+    server = SimpleXMLRPCServer((settings.STGSCALL_HOST, int(settings.STGSCALL_PORT)), allow_none=True)
     server.register_introspection_functions()
     server.register_function(Public_RegisterFile,  'RegisterFile' )
     server.register_function(Public_CloseFile,     'CloseFile'    )
@@ -227,7 +228,7 @@ class main_daemon(Daemon):
             sys.exit()      
 
 if __name__ == "__main__":
-        daemon = main_daemon(settings.STGDAEMON_PID, stdout=settings.STGDAEMON_LOG, stderr=settings.STGDAEMON_LOG)
+        daemon = main_daemon(settings.STGSCALL_PID, stdout=settings.STGSCALL_LOG, stderr=settings.STGSCALL_LOG)
         if len(sys.argv) == 2:
                 if 'start'     == sys.argv[1]:
                         daemon.start()

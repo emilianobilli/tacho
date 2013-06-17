@@ -28,9 +28,10 @@ from storage.storageutils import DequeueBestCandidate_Put
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # OS System calls
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-from os   import wait
+from os   import waitpid
 from os   import fork
 from os   import getpid
+from os   import WNOHANG
 from sys  import exit
 from sys  import argv
 from time import sleep
@@ -48,24 +49,31 @@ from signal import SIGCHLD
 #              de manera inesperada y corrige el resultado de la transferencia
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 def WorkerDie(signaln, frame):
-    pid, status = wait()
-
-    try:
-	# Busca cual es el hijo que termino
-	Q = Queue.objects.get(worker_pid=pid)
-	if Q.status == 'A':
-    	    # Fallo inesperadamente
-    	    logging.error('WorkerDie(): Worker [Pid=%d] died with status [%d]' % (pid,status))
-    	    logging.error('WorkerDie(): Queue [%s] in error state' % Q)
-	    Q.status = 'E'
-    	    Q.error  = 'Worker died Unexpectedly'
-    	    Q.save()
-	else:
-    	    logging.info('WorkerDie(): Worker [Pid=%d] end, Transfer result = %s' % (pid,Q.status))
-    except:
-	# No lo encontro, es un hijo no reconocido
-	logging.error('WorkerDie(): Unregistred worker die [Pid=%d]' % pid)
-
+    pid, status = waitpid(-1, WNOHANG)
+    while pid != 0:
+	try:
+	    # Busca cual es el hijo que termino
+	    Q = Queue.objects.get(worker_pid=pid)
+	    if Q.status == 'A':
+    		# Fallo inesperadamente
+    		logging.error('WorkerDie(): Worker [Pid=%d] died with status [%d]' % (pid,status))
+    	        logging.error('WorkerDie(): Queue [%s] in error state' % Q)
+	        Q.status = 'E'
+    		Q.error  = 'Worker died Unexpectedly'
+    		Q.save()
+	    else:
+    		logging.info('WorkerDie(): Worker [Pid=%d] end, Transfer result = %s' % (pid,Q.status))
+	except:
+	    # No lo encontro, es un hijo no reconocido
+	    logging.error('WorkerDie(): Unregistred worker die [Pid=%d]' % pid)
+	try:
+	    pid, status = waitpid(-1, WNOHANG)
+	except OSError as e:
+	    #
+	    # Si no tiene hijos tira un error
+	    #
+	    if e.errno == 10:
+		break;
 
 def ForkWorker(Queue=None):
 
@@ -131,7 +139,7 @@ def StoragedMain():
 
     # Configura el archivo de log
     logging.basicConfig(format   = '%(asctime)s - storaged.py -[%(levelname)s]: %(message)s', 
-			filename = settings.STORAGED_LOG,
+			filename = settings.STGKERNEL_LOG,
 			level    = logging.INFO)
 
     
@@ -157,9 +165,11 @@ def StoragedMain():
 		    if not result:
 			End = True
 			continue
+		    sleep(0.3)
 		else:
 		    logging.info('StorageMain(): No more candidates')
 		    flag = True
+		i = i + 1
 
 	    Qlen_Put = TotalSchedulableQueue_Put(service)
 	    logging.info('StorageMain(): Put Schedulable: %d', Qlen_Put)
@@ -172,10 +182,12 @@ def StoragedMain():
 		    if not result:
 			End = True
 			continue
+		    sleep(0.3)
 		else:
 		    logging.info('StorageMain(): No mode candidates')
 		    flag = True
-	
+		i = i + 1	
+
 	logging.info('StorageMain(): No more work -> Sleep')
 	sleep(10)
 
@@ -188,7 +200,7 @@ class DaemonMain(Daemon):
             exit()      
 
 if __name__ == "__main__":
-        daemon = DaemonMain(settings.STORAGED_PID, stdout=settings.STORAGED_LOG, stderr=settings.STORAGED_LOG)
+        daemon = DaemonMain(settings.STGKERNEL_PID, stdout=settings.STGKERNEL_LOG, stderr=settings.STGKERNEL_LOG)
         if len(argv) == 2:
                 if 'start'     == argv[1]:
                         daemon.start()

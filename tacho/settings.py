@@ -7,10 +7,13 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
-STORAGED_PID  = '/opt/tacho/app/tacho/pid/stgdaemon.pid'
-STORAGED_LOG  = '/opt/tacho/app/tacho/logs/stgdaemon.log'
-STGDAEMON_HOST = '0.0.0.0'
-STGDAEMON_PORT = '3000'
+
+STGKERNEL_PID  = '/opt/tacho/app/tacho/pid/stgkernel.pid'
+STGKERNEL_LOG  = '/opt/tacho/app/tacho/logs/stgkernel.log'
+STGSCALL_PID  = '/opt/tacho/app/tacho/pid/stgscall.pid'
+STGSCALL_LOG  = '/opt/tacho/app/tacho/logs/stgscall.log'
+STGSCALL_HOST = '0.0.0.0'
+STGSCALL_PORT = '3000'
 
 
 MANAGERS = ADMINS

@@ -418,7 +418,6 @@ def GetFile(Queue=None):
     except error_perm, e:
 	raise StorageError('GetFile(): %s' % str(e))
 
-
     try:
 	FileSize = FtpHandler.size(FtpData['filename'])
     except error_perm, e:
@@ -446,6 +445,7 @@ def GetFile(Queue=None):
 	DeleteFile(File.ufid)
 	raise StorageError('GetFile(): %s' % e.strerror)
     except IOError as e:
+	DeleteFile(File.ufid)
 	raise StorageError('CallBack(): on Write [%s] %s' % (Queue.service.localpath + Queue.file.pfilename, e.strerror))
 
     LocalFile.close()
